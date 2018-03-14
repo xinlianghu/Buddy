@@ -1,0 +1,10 @@
+﻿  slab.c
+d:\microsoft visual studio 14.0\vc\include\vcruntime.h(198): warning C4114: 多次使用同一类型限定符
+d:\microsoft visual studio 14.0\vc\include\vcruntime.h(198): warning C4091: “typedef ”: 没有声明变量时忽略“unsigned long”的左侧
+e:\visual studio 2015\projects\slab\slab\slab\slab.c(43): warning C4018: “<”: 有符号/无符号不匹配
+e:\visual studio 2015\projects\slab\slab\slab\slab.c(84): warning C4129: “,”: 不可识别的字符转义序列
+e:\visual studio 2015\projects\slab\slab\slab\slab.c(112): warning C4047: “return”:“void *”与“ulong_t”的间接级别不同
+e:\visual studio 2015\projects\slab\slab\slab\slab.c(84): warning C4477: “printf”: 格式字符串“%x”需要类型“unsigned int”的参数，但可变参数 1 拥有了类型“_list *”
+e:\visual studio 2015\projects\slab\slab\slab\slab.c(84): warning C4477: “printf”: 格式字符串“%x”需要类型“unsigned int”的参数，但可变参数 2 拥有了类型“_list *”
+  Slab.vcxproj -> E:\Visual Studio 2015\Projects\slab\Slab\Debug\Slab.exe
+  Slab.vcxproj -> E:\Visual Studio 2015\Projects\slab\Slab\Debug\Slab.pdb (Full PDB)
