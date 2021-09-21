@@ -1,4 +1,4 @@
-#include"slab.h"
+#include"buddy.h"
 #include<stdio.h>
 ulong_t size = (1 << 12) * 16;
 upchar_t memory = NULL;

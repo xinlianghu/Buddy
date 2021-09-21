@@ -1,4 +1,4 @@
-#include"slab.h"
+#include"buddy.h"
 #include <stdio.h>
 #include <malloc.h>
 #include<string.h>
