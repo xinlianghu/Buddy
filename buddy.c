@@ -2,12 +2,13 @@
 #include <stdio.h>
 #include <malloc.h>
 #include<string.h>
+struct page *pages = NULL;
 uchar_t *init_memory(ulong_t size)
 {
 	uchar_t *p = NULL;
 	if ((p = (uchar_t *)malloc(size)) == NULL)
 	{
-		printf("·ÖÅäÄÚ´æÊ§°Ü£¡");
+		printf("åˆ†é…å†…å­˜å¤±è´¥ï¼");
 		return NULL;
 	}
 	else {
@@ -19,7 +20,7 @@ void init_zone(struct zone* p,ulong_t size)
 {
 	for (int i = 0; i < MAX_ORDER; i++)
 	{
-		ulong_t len = size >> (i + 1 + 3);
+		ulong_t len = size >> (i);
 		p->map[i] = (uchar_t *)malloc(len);
 		memset(p->map[i], 0, len);
 	}
@@ -27,7 +28,7 @@ void init_zone(struct zone* p,ulong_t size)
 	p->total_free = size;
 	p->total = size;
 }
-//½«³õÊ¼Á´±í°´×î´óorder³õÊ¼»¯
+//å°†åˆå§‹é“¾è¡¨æŒ‰æœ€å¤§orderåˆå§‹åŒ–
 void init_free_area(struct zone* p, ulong_t size)
 {
 	for (int i = 0; i<MAX_ORDER;i++)
@@ -42,9 +43,10 @@ void init_free_area(struct zone* p, ulong_t size)
 	current->nr_free = num;
 	for (int i = 0; i < num; i++)
 	{
-		struct page* page = (struct page*)malloc(sizeof(struct page));
-		page->order = current_order;
-		page->vm_addr = i * (1<< current_order);
+		//struct page* page = (struct page*)malloc(sizeof(struct page));
+		struct page* page = (struct page*)&pages[i * (1 << current_order)];
+		//page->order = current_order;
+		//page->vm_addr = i * (1<< current_order);
 		list_add_to_tail(&(current->free_list), &(page->list));
 	}
 }
@@ -53,71 +55,74 @@ void * kmalloc(struct zone* p, ulong_t size)
 	if (p->total_free < size)
 		return NULL;
 	uint_t order = 0;
-	//ÕÒµ½×îĞ¡µÄorder
+	//æ‰¾åˆ°æœ€å°çš„order
 	for ( uint_t i= 1; i < size && order < MAX_ORDER-1; i = i << 1,order++);
-	printf("%d,%d\n", size,order);
+	//printf("%d,%d\n", size,order);
 	uint_t current_order = 0;
-	//ÕÒµ½×îĞ¡µÄ¿ÉÓÃµÄorder
+	//æ‰¾åˆ°æœ€å°çš„å¯ç”¨çš„order
 	for (current_order = order; current_order < MAX_ORDER; current_order++)
 	{
 		if (p->free_area[current_order].nr_free)
 			break;
 	}
-	printf("%d\n", current_order);
-	//¿ÉÓÃÄÚ´æµÄÁ´±íÍ·
+	//printf("%d\n", current_order);
+	//å¯ç”¨å†…å­˜çš„é“¾è¡¨å¤´
 	PListHead head = NULL;
 	struct page *page = NULL;
 	ulong_t base = 0,index=0;
 	struct page * tmp = NULL;
 
-		head  = &(p->free_area[current_order].free_list);
-		page = list_entry(head->next, struct page, list);
-		//´Ó¸ÃÁ´±íÖĞÉ¾³ı¸Ã½Úµã
-		list_delete(head->next);
-		//ÉèÖÃÏàÓ¦µÄ»ï°éÎ»
-		set_bit(p, page->vm_addr>>(current_order+1), current_order);
-		//¼õÉÙÏàÓ¦µÄÁ´±í¿ÉÓÃµÄ½ÚµãÊı
-		p->free_area[current_order].nr_free--;
-		struct page * pos = NULL;
-		printf("********************\n");
+	head  = &(p->free_area[current_order].free_list);
+	page = list_entry(head->next, struct page, list);
+	//ä»è¯¥é“¾è¡¨ä¸­åˆ é™¤è¯¥èŠ‚ç‚¹
+	list_delete(head->next);
+	//è®¾ç½®ç›¸åº”çš„ä¼™ä¼´ä½
+	int idx = PAGE_INDEX(page);
+	set_bit(p, idx>>(current_order+1), current_order);
+	//å‡å°‘ç›¸åº”çš„é“¾è¡¨å¯ç”¨çš„èŠ‚ç‚¹æ•°
+	p->free_area[current_order].nr_free--;
+	struct page * pos = NULL;
+	//printf("********************\n");
 
-		printf("%x,%x\,%d,%dn", page->list.pre, page->list.next,page->order,page->vm_addr);
-		//Ö±µ½·ÖÁÑµ½¸Ã×îĞ¡½ÚµãÎªÖ¹
-		while (current_order != order)
-		{
-		printf("***********current_order:%d*********\n",current_order);
-		//·ÖÁÑ½Úµã
-		base = page->vm_addr;
-		page->order = current_order - 1;
-		index = base + (1 << (current_order - 1));
-		tmp = (struct page *)malloc(sizeof(struct page));
-		//Ô­½ÚµãÁíÍâÒ»¸ö½ÚµãµÄµØÖ·
-		tmp->vm_addr = index;
-		tmp->order = current_order - 1;
+	//printf("%x,%x\,%d,%dn", page->list.pre, page->list.next,page->order,page->vm_addr);
+	//ç›´åˆ°åˆ†è£‚åˆ°è¯¥æœ€å°èŠ‚ç‚¹ä¸ºæ­¢
+	while (current_order > 0 && current_order != order)
+	{
+		//printf("***********current_order:%d*********\n",current_order);
+		//åˆ†è£‚èŠ‚ç‚¹
+		//base = page->vm_addr;
+		int page_idx = PAGE_INDEX(page);
+		//page->order = current_order - 1;
+		index = page_idx + (1 << (current_order - 1));
+		tmp = (struct page *)&pages[index];
+		//åŸèŠ‚ç‚¹å¦å¤–ä¸€ä¸ªèŠ‚ç‚¹çš„åœ°å€
+		//tmp->vm_addr = index;
+		//tmp->order = current_order - 1;
 		current_order = current_order - 1;
-		//»ñÈ¡µ±Ç°order¶ÔÓ¦µÄÁ´±íÍ·
+		//è·å–å½“å‰orderå¯¹åº”çš„é“¾è¡¨å¤´
 		head = &(p->free_area[current_order].free_list);
-		//½«Á½¸ö½ÚµãÖĞµÄĞ¡µÄÒ»¸ö²åÈëµ½¸ÃÁ´±íÖĞ
+		//å°†ä¸¤ä¸ªèŠ‚ç‚¹ä¸­çš„å°çš„ä¸€ä¸ªæ’å…¥åˆ°è¯¥é“¾è¡¨ä¸­
 		list_add_to_head(head, &(page->list));
-		//ÉèÖÃÏàÓ¦orderÖĞµÄ»ï°éÎ»
-		set_bit(p, page->vm_addr>>(current_order+1), current_order);
+		//è®¾ç½®ç›¸åº”orderä¸­çš„ä¼™ä¼´ä½
+		set_bit(p, page_idx>>(current_order+1), current_order);
 		p->free_area[current_order].nr_free++;
-		//½«ÁíÒ»¸ö½ÚµãÉèÖÃÎªµ±Ç°½Úµã
+		//å°†å¦ä¸€ä¸ªèŠ‚ç‚¹è®¾ç½®ä¸ºå½“å‰èŠ‚ç‚¹
 		page = tmp;
-		printf("base:%d\tindex:%d\n", base, index);
-		}
-		//½«×Ü¿ÉÓÃ¿Õ¼ä¼õÉÙÏàÓ¦µÄÖµ
-		p->total_free -= size;
-		printf("********************\n");
-	return tmp->vm_addr;
+		//printf("base:%d\tindex:%d\n", base, index);
+	}
+	//å°†æ€»å¯ç”¨ç©ºé—´å‡å°‘ç›¸åº”çš„å€¼
+	p->total_free -= size;
+	int page_idx = PAGE_INDEX(page);
+	//printf("********************\n");
+	return (void *)PAGE_INDEX_ADDR(page_idx);
 }
 void set_bit(struct zone *p, ulong_t index, uint_t order)
 {
-	//¶ÔÏàÓ¦order¶ÔÓ¦µÄ»ï°éÎ»½øĞĞÒì»ò£¬indexÎª»ï°é¿ìÎ»Ë÷Òı
+	//å¯¹ç›¸åº”orderå¯¹åº”çš„ä¼™ä¼´ä½è¿›è¡Œå¼‚æˆ–ï¼Œindexä¸ºä¼™ä¼´å¿«ä½ç´¢å¼•
 	p->map[order][index>>3] = (p->map[order][index >> 3] ^ (1 << (index % 8)));
-	printf("set_bit:index:%d,order:%d,index:%d,bit:%d\n", index, order, index >> 3, index % 8);
+	//printf("set_bit:index:%d,order:%d,index:%d,bit:%d\n", index, order, index >> 3, index % 8);
 }
-//»ñÈ¡ÏàÓ¦µÄbitÎ»
+//è·å–ç›¸åº”çš„bitä½
 uint_t get_bit(struct zone *p, ulong_t index, uint_t order)
 {
 	 return (p->map[order][index >> 3] & (1 << (index % 8)))?1:0;
@@ -129,58 +134,68 @@ void kfree(struct zone* p, ulong_t vm_addr,uint_t order)
 	uint_t current_order = order;
 	struct page * page = NULL;
 	struct page * buddy_page = NULL;
-	page = (struct page *)malloc(sizeof(struct page));
-	page->order = current_order;
-	page->vm_addr = vm_addr & ((~1L) << (current_order - 1));
-	//²éÕÒ»ï°é¿éµÄµØÖ·
-	buddy = find_buddy(page->vm_addr, current_order);
+	//page = (struct page *)malloc(sizeof(struct page));
+	//page->order = current_order;
+	ulong_t page_addr = vm_addr;
+	int page_idx = ADDR_PAGE_INDEX(page_addr);
+	if(current_order > 0)
+	{
+		page_idx = page_idx & ((~1L) << (current_order - 1));
+	}
+
+	page = (struct page*)&(pages[page_idx]);
+	//æŸ¥æ‰¾ä¼™ä¼´å—çš„åœ°å€
+	buddy = find_buddy(page_idx, current_order);
 	PListHead head = NULL;
-	p->total_free += 1 << page->order;
-	printf("free current_order:%d,vm_addr:%d,buddy:%d\n", current_order, vm_addr, buddy);
-	//µ±ÓĞ»ï°é¿é¿ÕÏĞÊ±
+	p->total_free += 1 << current_order;
+	//printf("free current_order:%d,vm_addr:%d,buddy:%d\n", current_order, vm_addr, buddy);
+	//å½“æœ‰ä¼™ä¼´å—ç©ºé—²æ—¶
 	while(has_buddy(p, buddy>>(current_order+1), current_order)&& current_order < MAX_ORDER-1)
 	{
 		set_bit(p, buddy>>(current_order+1), current_order);
 	//	page = find_page(p, vm_addr, order);
-		//²éÕÒ»ï°é¿é¶ÔÓ¦µÄ½Úµã
+		//æŸ¥æ‰¾ä¼™ä¼´å—å¯¹åº”çš„èŠ‚ç‚¹
 		buddy_page = find_page(p, buddy, current_order);
-		//´ÓÁ´±íÖĞÕª³ı¸Ã½Úµã
+		//ä»é“¾è¡¨ä¸­æ‘˜é™¤è¯¥èŠ‚ç‚¹
 		list_delete(&(buddy_page->list));
 		p->free_area[current_order].nr_free--;
-		//½«ÊÍ·Å½ÚµãÓë¸Ã½ÚµãºÏ²¢
+		//å°†é‡Šæ”¾èŠ‚ç‚¹ä¸è¯¥èŠ‚ç‚¹åˆå¹¶
 		current_order++;
-		page->order = current_order;
-		//ĞÂ½ÚµãµØÖ·
-		page->vm_addr = page->vm_addr & ((~1L) << (current_order-1));
-		//²éÕÒĞÂ½ÚµãµÄ»ï°é¿éµØÖ·
-		buddy = find_buddy(page->vm_addr, current_order);
-		printf("free current_order:%d,vm_addr:%d,buddy:%d\n", current_order, vm_addr,buddy);
+		//page->order = current_order;
+		//æ–°èŠ‚ç‚¹åœ°å€
+		//page->vm_addr = page->vm_addr & ((~1L) << (current_order-1));
+		page_idx = PAGE_INDEX(page);
+		page_idx = page_idx & ((~1L) << (current_order-1));
+		page = (struct page*)&(pages[page_idx]);
+		//æŸ¥æ‰¾æ–°èŠ‚ç‚¹çš„ä¼™ä¼´å—åœ°å€
+		buddy = find_buddy(page_idx, current_order);
+		//printf("free current_order:%d,vm_addr:%d,buddy:%d\n", current_order, vm_addr,buddy);
 	}
-	//ÈôÎ´ÕÒµ½¿ÕÏĞ»ï°é¿é£¬ÔòÖ±½Ó²åÈëµ½¸ÃÁ´±íÖĞ
+	//è‹¥æœªæ‰¾åˆ°ç©ºé—²ä¼™ä¼´å—ï¼Œåˆ™ç›´æ¥æ’å…¥åˆ°è¯¥é“¾è¡¨ä¸­
 	head = &(p->free_area[current_order].free_list);
 	list_add(head, &(page->list));
 	p->free_area[current_order].nr_free++;
-	set_bit(p, (page->vm_addr) >> (current_order + 1), current_order);
-	printf("free current_order:%d,vm_addr:%d,buddy:%d\n", current_order, vm_addr, buddy);
+	set_bit(p, (page_idx) >> (current_order + 1), current_order);
+	//printf("free current_order:%d,vm_addr:%d,buddy:%d\n", current_order, vm_addr, buddy);
 }
-//ÅĞ¶ÏÊÇ·ñ´æÔÚ¿ÕÏĞµÄ»ï°é¿é
+//åˆ¤æ–­æ˜¯å¦å­˜åœ¨ç©ºé—²çš„ä¼™ä¼´å—
 bool has_buddy(struct zone * p, ulong_t buddy, uint_t order)
 {
 	return get_bit(p, buddy, order);
 }
-//µÃµ½»ï°é¿éµÄµØÖ·
+//å¾—åˆ°ä¼™ä¼´å—çš„åœ°å€
 ulong_t find_buddy(ulong_t vm_addr, uint_t order)
 {
 	ulong_t buddy = vm_addr ^ (1 << order );
 	return buddy;
 }
-//´ÓÁ´±íÖĞÕÒµ½¸ÃµØÖ·Ëù¶ÔÓ¦µÄ½Úµã
+//ä»é“¾è¡¨ä¸­æ‰¾åˆ°è¯¥åœ°å€æ‰€å¯¹åº”çš„èŠ‚ç‚¹
 struct page* find_page(struct zone * p,ulong_t buddy,uint_t order)
 {
 	struct page * page = NULL;
 	list_for_each_entry(&(p->free_area[order].free_list), page, struct page, list)
 	{
-		if (page->vm_addr == buddy)
+		if (PAGE_INDEX(page) == buddy)
 			return page;
 	}
 	return NULL;

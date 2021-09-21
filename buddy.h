@@ -3,6 +3,10 @@
 #define LENGTH 1024*1024*128
 #define MAX_ORDER 11
 #define NULL 0
+extern struct page *pages;
+
+
+
 /*********************************************************/
 typedef unsigned int uint_t;
 typedef unsigned char uchar_t;
@@ -21,9 +25,14 @@ struct zone{
 };
 struct page {
 	ListHead list;
-	uint_t order;
-	ulong_t vm_addr;
 };
+
+
+#define PAGE_INDEX(page_addr) ((((ulong_t)page_addr) - (ulong_t)(pages))/sizeof(struct page))
+#define PAGE_INDEX_ADDR(idx) ((idx)* (PAGE_SIZE))
+#define ADDR_PAGE_INDEX(idx) ((idx)/ (PAGE_SIZE))
+#define PAGE_SIZE (4096)
+#define PAGEOFFSET (0xc0000000)
 /***********************************************************/
 void init_free_area(struct zone* p, ulong_t size);
 void init_zone(struct zone* p, ulong_t size);

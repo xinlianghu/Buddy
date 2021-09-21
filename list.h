@@ -3,7 +3,7 @@
 #define bool char
 #define true 1
 #define false 0
-#define size_t unsigned long
+//#define size_t unsigned long
 /******************************************/
 #define list_for_each(head,pos) (for(pos = head->next;pos!=head;pos=pos->next))
 #define offset_of(type,member) (size_t)&(((type *)0)->member)
